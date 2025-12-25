@@ -70,6 +70,34 @@ void showConnectionStatus(const char *status)
     display.display();
 }
 
+// --- SHOW WIFI ATTEMPT (NEW FUNCTION) ---
+// Displays "Trying Network:" followed by the SSID on a new line.
+// This fixes the layout issue by manually positioning the text.
+void showWifiAttempt(const char *ssid)
+{
+    display.clearDisplay();
+    display.setTextSize(1);
+
+    // Header
+    display.setCursor(0, 0);
+    display.println("CONNECTING...");
+
+    // Line
+    display.drawLine(0, 10, 128, 10, SSD1306_WHITE);
+
+    // Label: "Trying Network:"
+    // Placed at Y=15
+    display.setCursor(0, 15);
+    display.println("Trying Network:");
+
+    // Value: SSID Name
+    // Placed at Y=25 (Next line)
+    display.setCursor(0, 25);
+    display.println(ssid);
+
+    display.display();
+}
+
 // --- MAIN UI ---
 // This is the main interface showing the Mode and Active Macro
 void updateUI(const char *modeName, const char *macroName)

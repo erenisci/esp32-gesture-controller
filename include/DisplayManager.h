@@ -24,6 +24,10 @@ void showStartupScreen();
 // Updates the screen with WiFi connection progress (e.g., "Connecting...", "Failed").
 void showConnectionStatus(const char *status);
 
+// Shows the specific network SSID currently being attempted.
+// This is used to display "Trying Network:" followed by the SSID on a new line.
+void showWifiAttempt(const char *ssid);
+
 // The MAIN UI function.
 // Displays the Mode Name (Header) and the Macro Name (Body).
 void updateUI(const char *modeName, const char *macroName);

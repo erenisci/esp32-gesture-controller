@@ -5,21 +5,21 @@
 #include "DisplayManager.h"
 #include "WifiManager.h"
 
+// --- GLOBAL VARIABLE FOR DYNAMIC HOST ---
+// Holds the IP address selected based on the connected WiFi network.
+const char *targetHost;
+
 // --- GLOBAL OBJECTS ---
 // The WebSocket client instance
 WebSocketsClient webSocket;
 
 // Memory buffer for JSON parsing.
-// 200 bytes is enough for simple messages like {"type":"ui_update", ...}
 StaticJsonDocument<200> doc;
 
 // --- WEBSOCKET EVENT HANDLER ---
-// This function runs automatically whenever a WebSocket event occurs
-// (Connected, Disconnected, or Message Received).
 void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 {
-    // CRITICAL: Declare variables at the top of the function.
-    // Declaring them inside 'switch' cases can cause "jump to case label" compiler errors.
+    // CRITICAL: Declare variables at the top to avoid compiler errors
     DeserializationError error;
     const char *msgType;
     const char *mode;
@@ -29,7 +29,9 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     {
     case WStype_DISCONNECTED:
         Serial.println("[WS] Disconnected!");
-        // Optional: You could update the OLED here to say "Disconnected"
+
+        // UX: Update the OLED immediately so the user knows server is down
+        showConnectionStatus("Connection Lost!");
         break;
 
     case WStype_CONNECTED:
@@ -44,7 +46,6 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         Serial.printf("[WS] Recv: %s\n", payload);
 
         // 1. PARSE JSON
-        // Convert the raw payload (string) into a usable JSON object.
         error = deserializeJson(doc, payload);
 
         if (!error)
@@ -79,32 +80,53 @@ void setup()
     // 1. Initialize Hardware (OLED)
     initDisplay();
     showStartupScreen();
-    delay(1000); // Short pause to let user see the boot screen
+    delay(1000);
 
     // 2. Connect to Network
     // This function blocks until WiFi is connected.
     setupWiFi();
 
+    // --- SMART HOST SELECTION LOGIC ---
+    // Check WHICH network we are on to select the correct PC IP.
+
+    String currentSSID = WiFi.SSID();
+
+    Serial.print("Connected to SSID: ");
+    Serial.println(currentSSID);
+
+    if (currentSSID == WIFI_SSID_1)
+    {
+        // Scenario A: Primary Location (e.g. Home) -> IP .33
+        targetHost = WS_SERVER_HOST_1;
+        Serial.println("Location Detected: PRIMARY (Using Host 1)");
+    }
+    else if (currentSSID == WIFI_SSID_2)
+    {
+        // Scenario B: Secondary Location (e.g. Ankara) -> IP .20
+        targetHost = WS_SERVER_HOST_2;
+        Serial.println("Location Detected: SECONDARY (Using Host 2)");
+    }
+    else
+    {
+        // Fallback
+        targetHost = WS_SERVER_HOST_1;
+        Serial.println("Location Unknown: Defaulting to Host 1");
+    }
+
     // 3. Connect to WebSocket Server
     Serial.print("Connecting to Server: ");
-    Serial.print(WS_SERVER_HOST); // Defined in secrets.h
+    Serial.print(targetHost);
     Serial.print(":");
-    Serial.println(WS_SERVER_PORT); // Defined in secrets.h
+    Serial.println(WS_SERVER_PORT);
 
-    // Configure the connection
-    webSocket.begin(WS_SERVER_HOST, WS_SERVER_PORT, "/");
-
-    // Register the event handler function defined above
+    // Configure connection
+    webSocket.begin(targetHost, WS_SERVER_PORT, "/");
     webSocket.onEvent(webSocketEvent);
-
-    // Auto-reconnect every 5 seconds if connection is lost
     webSocket.setReconnectInterval(5000);
 }
 
 // --- MAIN LOOP ---
 void loop()
 {
-    // CRITICAL: Keep the socket alive!
-    // This handles sending pings, receiving data, and maintaining the connection.
     webSocket.loop();
 }
