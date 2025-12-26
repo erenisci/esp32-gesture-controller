@@ -16,6 +16,12 @@ public:
 private:
     Adafruit_SSD1306 display;
 
-    void drawScrollingLine(int y, const String &text, bool isTitle);
+    // --- YENİ EKLENEN DEĞİŞKENLER ---
+    String lastTitle;              // Bir önceki döngüdeki şarkı ismi
+    String lastArtist;             // Bir önceki döngüdeki sanatçı
+    unsigned long scrollStartTime; // Şarkı değiştiği anki zaman (millis)
+    // -------------------------------
+
+    void drawScrollingLine(int y, const String &text, bool isTitle, int offset);
     String formatTime(long ms);
 };
