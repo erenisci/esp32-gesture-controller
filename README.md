@@ -1,61 +1,73 @@
-# Spotify IoT Display - Full Stack Project
+# Spotify IoT Dashboard: Dual-Core ESP32 & Serverless Bridge
 
-An end-to-end IoT solution that visualizes your real-time Spotify playback on an ESP32-driven OLED display. This project combines embedded systems engineering with modern web architecture.
-
----
-
-## Project Architecture
-
-This project is built using a **BFF (Backend-for-Frontend)** pattern to solve the limitations of microcontrollers.
-
-1.  **Firmware (ESP32):** A C++ application utilizing dual-core processing. It focuses on high-speed UI rendering and simple data fetching.
-2.  **Backend (Node.js):** A serverless API that handles Spotify's OAuth2 complex authentication and data pruning.
-3.  **Setup Tool:** A web interface used to securely link a physical device (MAC Address) to a Spotify account.
+This project is an end-to-end IoT solution that bridges physical hardware with digital music streaming. It transforms a standard ESP32 into a professional dashboard that visualizes Spotify playback data in **real-time**.
 
 ---
 
-## Repository Structure
+## System Architecture (Technical Overview)
 
-The project is organized as a monorepo for easy management:
+To overcome the resource limitations of microcontrollers and maximize performance, a **BFF (Backend-for-Frontend)** architecture was implemented.
 
-- **[`/firmware`](./firmware):** ESP32 C++ source code, libraries, and hardware wiring diagrams.
-- **[`/tools/spotify-setup-tool`](./tools/spotify-setup-tool):** Backend API (Vercel Functions) and the Setup Tool website.
-
----
-
-## How It Works
-
-### 1. Zero-Lag UI Logic
-
-The firmware uses **Dead Reckoning Interpolation**. Instead of waiting for the API to update the progress bar every second, the ESP32 calculates the sub-second progress locally based on its internal clock. This results in a "butter-smooth" 60 FPS animation.
-
-### 2. Dual-Core Multithreading
-
-- **Core 0:** Dedicated to networking. It handles SSL handshakes and JSON parsing without blocking the UI.
-- **Core 1:** Dedicated to the OLED display. It ensures the text always scrolls smoothly and the bar never stutters.
-
-### 3. Secure OAuth2 Bridge
-
-By offloading authentication to the cloud backend, we never store Spotify `Client Secrets` on the hardware. Tokens are stored securely in a PostgreSQL database and mapped to the device's unique MAC Address.
+1.  **Firmware (ESP32 - C++):** Manages asynchronous data handling and smooth UI rendering at the hardware level.
+2.  **BFF Bridge (Node.js - Vercel):** Handles complex OAuth2 flows, token refreshing, and JSON pruning in the cloud, reducing the workload on the ESP32 by 90%.
+3.  **Setup Tool (Web):** A modern web interface powered by JS automation that allows users to securely link their physical device (MAC Address) to their Spotify account.
 
 ---
 
-## Quick Installation
+## Advanced Features & Engineering Solutions
 
-1.  **Deploy the Backend:** Follow the instructions in the [Backend README](./backend/README.md) to set up your Vercel and Supabase instance.
-2.  **Flash the Firmware:** Open the [Firmware directory](./firmware) in PlatformIO, set your `SERVER_URL`, and upload the code to your ESP32.
-3.  **Link Your Account:** Visit your deployed web tool, enter your device's MAC Address, and log in with Spotify.
+### 1. Dead Reckoning Interpolation (Smooth Progress Bar)
+
+The Spotify API updates playback data at intervals of a second or more, which typically causes stuttering on progress bars. I developed an interpolation algorithm that synchronizes with the device's internal clock (millis) the moment data arrives. It predicts the sub-second progress until the next update. Result: **Zero stutter, perfectly fluid animation.**
+
+### 2. Dual-Core Asynchronous Processing
+
+Both cores of the ESP32 are actively utilized:
+
+- **Core 0 (Network Thread):** Handles HTTP requests, SSL certificate validation, and JSON parsing. These blocking operations occur in the background without affecting the display.
+- **Core 1 (Main UI Thread):** Refreshes the OLED screen at 25+ FPS, rendering scrolling text animations and the progress bar.
+
+### 3. Smart Data Pruning
+
+A raw Spotify API response is a complex JSON object exceeding 10KB. Our server layer processes this data into an optimized **~100-byte** packet. This minimizes the device's RAM usage and eliminates the risk of memory-related crashes.
 
 ---
 
-## Hardware Requirements
+## Repository Structure (Monorepo)
 
-- **ESP32** (Any standard DevKit)
-- **SSD1306 OLED Display** (128x64 I2C)
-- **WiFi Connection** (2.4GHz)
+```bash
+├── firmware/                 # PlatformIO project (C++ / Arduino)
+│   ├── src/                  # Core source code (Main, Display & Network Manager)
+│   └── include/              # Header files (.h)
+├── backend/
+│   └── spotify-setup-tool/   # Vercel Backend & Frontend
+│       ├── api/              # Serverless Functions (Node.js)
+│       └── public/           # Web Pairing Interface (with MAC auto-format JS)
+└── README.md                 # Main documentation
+```
+
+---
+
+## Hardware Setup & Pinout
+
+| SSD1306 OLED (I2C) | ESP32 DevKit | Function         |
+| :----------------- | :----------- | :--------------- |
+| **VCC**            | 3.3V         | Power Supply     |
+| **GND**            | GND          | Ground           |
+| **SDA**            | GPIO 21      | Data Line (I2C)  |
+| **SCL**            | GPIO 22      | Clock Line (I2C) |
+
+---
+
+## Quick Start
+
+1. **Backend Deployment**: Follow the instructions in the `/backend/spotify-setup-tool` directory to set up your Vercel and Supabase instances.
+2. **Firmware Upload**: Update the `SERVER_URL` variable in `firmware/src/main.cpp` with your own URL:
+   `const char *SERVER_URL = "https://spotify-setup-tool.vercel.app/api/player?device_id=";`
+3. **Pairing**: Enter the MAC address shown on the device screen into the web interface. The interface automatically formats the MAC address for you. Log in with Spotify, and your device is ready!
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is protected under the [**MIT License**](./LICENSE).
