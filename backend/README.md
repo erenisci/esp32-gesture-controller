@@ -2,7 +2,7 @@
 
 This repository hosts the **Serverless Backend** and **Web Interface** for the Spotify IoT Display project.
 
-It serves as the secure bridge between your low-power ESP32 hardware and the complex Spotify Web API.
+It acts as a secure "Backend-for-Frontend" (BFF) bridge between the low-power ESP32 hardware and the complex Spotify Web API.
 
 **Live Tool:** [https://spotify-setup-tool.vercel.app](https://spotify-setup-tool.vercel.app)
 
@@ -20,7 +20,7 @@ Connecting a microcontroller directly to Spotify's API presents three major chal
 
 ### The Solution: A "Middleman" Server
 
-This project acts as a **Backend-for-Frontend (BFF)**. It does the heavy lifting so your hardware doesn't have to.
+This backend does the heavy lifting so your hardware doesn't have to.
 
 ```mermaid
 graph LR
@@ -29,3 +29,7 @@ graph LR
     C -- 3. Returns Huge JSON --> B
     B -- 4. Returns Tiny JSON --> A
 ```
+
+---
+
+_For the full project documentation and firmware setup, please refer to the root `README.md`._
