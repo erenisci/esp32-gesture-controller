@@ -82,4 +82,30 @@
       </form>
     </div>
   </body>
+  <script>
+    const deviceInput = document.querySelector('input[name="device_id"]');
+
+    deviceInput.addEventListener('input', e => {
+      let value = e.target.value.replace(/[^A-Fa-f0-9]/g, '');
+
+      let formattedValue = '';
+      for (let i = 0; i < value.length && i < 12; i++) {
+        if (i > 0 && i % 2 === 0) {
+          formattedValue += ':';
+        }
+        formattedValue += value[i];
+      }
+
+      e.target.value = formattedValue.toUpperCase();
+    });
+
+    deviceInput.addEventListener('keydown', e => {
+      if (e.key === 'Backspace') {
+        const value = e.target.value;
+        if (value.endsWith(':')) {
+          e.target.value = value.substring(0, value.length - 1);
+        }
+      }
+    });
+  </script>
 </html>
