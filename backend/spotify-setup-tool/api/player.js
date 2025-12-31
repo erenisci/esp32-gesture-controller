@@ -17,15 +17,17 @@ module.exports = async (req, res) => {
 
   try {
     const client = await pool.connect();
-    const result = await client.query('SELECT refresh_token FROM devices WHERE device_id = $1', [
-      device_id,
-    ]);
+    const result = await client.query(
+      'SELECT refresh_token, client_id, client_secret FROM devices WHERE device_id = $1',
+      [device_id]
+    );
     client.release();
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Device not registered', is_configured: false });
     }
-    const refresh_token = result.rows[0].refresh_token;
+
+    const { refresh_token, client_id, client_secret } = result.rows[0];
 
     const tokenRes = await axios({
       method: 'post',
@@ -36,17 +38,13 @@ module.exports = async (req, res) => {
       }),
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization':
-          'Basic ' +
-          Buffer.from(
-            process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
-          ).toString('base64'),
+        'Authorization': 'Basic ' + Buffer.from(`${client_id}:${client_secret}`).toString('base64'),
       },
     });
 
     const access_token = tokenRes.data.access_token;
 
-    const playerRes = await axios.get('https://api.spotify.com/v1/me/player/currently-playing', {
+    const playerRes = await axios.get('https://api.spotify.com/v1/me/player', {
       headers: { 'Authorization': `Bearer ${access_token}` },
     });
 
@@ -68,8 +66,7 @@ module.exports = async (req, res) => {
       progress: progressMs,
     });
   } catch (error) {
-    console.error('API Error:', error.message);
-    if (error.code) console.error('DB Code:', error.code);
+    console.error('API Error:', error.response ? error.response.data : error.message);
     res.status(500).json({ error: error.message });
   }
 };

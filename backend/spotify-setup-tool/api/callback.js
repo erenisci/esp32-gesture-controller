@@ -13,13 +13,20 @@ const pool = new Pool({
 
 module.exports = async (req, res) => {
   const code = req.query.code || null;
-  const device_id = req.query.state || null;
+  const state = req.query.state || null;
 
-  if (!code || !device_id) {
-    return res.send('Error: Missing code or device_id.');
+  if (!code || !state) {
+    return res.status(400).send('Error: Missing code or state.');
   }
 
   try {
+    const decodedState = JSON.parse(Buffer.from(state, 'base64').toString());
+    const { device_id, client_id, client_secret } = decodedState;
+
+    if (!device_id || !client_id || !client_secret) {
+      throw new Error('Invalid state data.');
+    }
+
     const tokenResponse = await axios({
       method: 'post',
       url: 'https://accounts.spotify.com/api/token',
@@ -30,11 +37,7 @@ module.exports = async (req, res) => {
       }),
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization':
-          'Basic ' +
-          Buffer.from(
-            process.env.SPOTIFY_CLIENT_ID + ':' + process.env.SPOTIFY_CLIENT_SECRET
-          ).toString('base64'),
+        'Authorization': 'Basic ' + Buffer.from(`${client_id}:${client_secret}`).toString('base64'),
       },
     });
 
@@ -43,24 +46,33 @@ module.exports = async (req, res) => {
     const client = await pool.connect();
     await client.query(
       `
-      INSERT INTO devices (device_id, refresh_token)
-      VALUES ($1, $2)
+      INSERT INTO devices (device_id, refresh_token, client_id, client_secret)
+      VALUES ($1, $2, $3, $4)
       ON CONFLICT (device_id)
-      DO UPDATE SET refresh_token = $2, updated_at = NOW();
+      DO UPDATE SET 
+        refresh_token = $2, 
+        client_id = $3, 
+        client_secret = $4, 
+        updated_at = NOW();
     `,
-      [device_id, refresh_token]
+      [device_id, refresh_token, client_id, client_secret]
     );
     client.release();
 
     res.send(`
       <body style="background:#121212; color:white; font-family:sans-serif; text-align:center; padding-top:50px;">
         <h1 style="color:#1DB954;">Success!</h1>
-        <p>Device <strong>${device_id}</strong> is now linked.</p>
+        <p>Device <strong>${device_id}</strong> is now linked to your custom Spotify App.</p>
         <p>You can restart your ESP32 now.</p>
       </body>
     `);
   } catch (error) {
-    console.error('Setup Error:', error.message);
-    res.send('Error during setup: ' + error.message);
+    console.error('Setup Error:', error.response ? error.response.data : error.message);
+    res
+      .status(500)
+      .send(
+        'Error during setup: ' +
+          (error.response ? JSON.stringify(error.response.data) : error.message)
+      );
   }
 };

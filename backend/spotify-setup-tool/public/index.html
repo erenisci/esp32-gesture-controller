@@ -6,40 +6,51 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
-    <title>Link Your Device</title>
+    <title>Spotify IoT - Link Device</title>
     <style>
       body {
         background: #121212;
         color: white;
-        font-family: sans-serif;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
+        min-height: 100vh;
         margin: 0;
+        padding: 20px;
       }
       .box {
         background: #181818;
         padding: 40px;
         border-radius: 12px;
         text-align: center;
-        width: 90%;
-        max-width: 400px;
-        box-shadow: 0 4px 60px rgba(0, 0, 0, 0.5);
+        width: 100%;
+        max-width: 450px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
       }
       h1 {
         color: #1db954;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        color: #b3b3b3;
+        font-size: 14px;
+        margin-bottom: 25px;
       }
       input {
         width: 100%;
         padding: 12px;
-        margin: 10px 0;
-        background: #333;
+        margin: 8px 0;
+        background: #282828;
         border: 1px solid #444;
         color: white;
-        border-radius: 4px;
+        border-radius: 6px;
         box-sizing: border-box;
+        transition: border 0.3s;
+      }
+      input:focus {
+        outline: none;
+        border-color: #1db954;
       }
       button {
         width: 100%;
@@ -50,23 +61,55 @@
         border-radius: 25px;
         font-weight: bold;
         cursor: pointer;
-        margin-top: 10px;
+        margin-top: 15px;
         font-size: 16px;
+        transition: transform 0.2s, background 0.2s;
       }
       button:hover {
         background: #1ed760;
+        transform: scale(1.02);
       }
-      p {
+      .guide {
+        text-align: left;
+        background: #222;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 25px;
+        border-left: 4px solid #1db954;
+      }
+      .guide h3 {
+        margin-top: 0;
+        font-size: 16px;
+        color: #1db954;
+      }
+      .guide ol {
+        padding-left: 20px;
+        margin-bottom: 0;
         color: #b3b3b3;
-        font-size: 14px;
-        line-height: 1.5;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      code {
+        background: #444;
+        padding: 2px 4px;
+        border-radius: 4px;
+        color: #fff;
+        word-break: break-all;
+      }
+      a {
+        color: #1db954;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
       }
     </style>
   </head>
   <body>
     <div class="box">
-      <h1>Connect Device</h1>
-      <p>Enter the MAC Address displayed on your ESP32 screen to link your Spotify account.</p>
+      <h1>Spotify IoT Player</h1>
+      <p class="subtitle">Securely link your device using your own Spotify API credentials.</p>
+
       <form
         action="/api/login"
         method="GET"
@@ -74,38 +117,78 @@
         <input
           type="text"
           name="device_id"
-          placeholder="Ex: A4:CF:12:XX:XX:XX"
+          placeholder="Device MAC Address (e.g., A4:CF:12...)"
           required
-          style="text-transform: uppercase"
+          maxlength="17"
         />
-        <button type="submit">Login with Spotify</button>
+        <input
+          type="text"
+          name="client_id"
+          placeholder="Spotify Client ID"
+          required
+        />
+        <input
+          type="password"
+          name="client_secret"
+          placeholder="Spotify Client Secret"
+          required
+        />
+        <button type="submit">Authorize with Spotify</button>
       </form>
+
+      <div class="guide">
+        <h3>How to setup?</h3>
+        <ol>
+          <li>
+            Go to the
+            <a
+              href="https://developer.spotify.com/dashboard"
+              target="_blank"
+              >Spotify Developer Dashboard</a
+            >.
+          </li>
+          <li>Click on <b>"Create app"</b>.</li>
+          <li>Enter an app name and description.</li>
+          <li>
+            Add this <b>Redirect URI</b>: <br /><code
+              >https://spotify-setup-tool.vercel.app/api/callback</code
+            >
+          </li>
+          <li>
+            In the <b>"Which API/SDKs are you planning to use?"</b> section, select: <br />•
+            <b>Web API</b>
+          </li>
+          <li>
+            Check the TOS box, save the app, go to <b>Settings</b>, and copy your
+            <b>Client ID</b> and <b>Client Secret</b> into the fields above.
+          </li>
+        </ol>
+      </div>
     </div>
+
+    <script>
+      const deviceInput = document.querySelector('input[name="device_id"]');
+
+      deviceInput.addEventListener('input', e => {
+        let value = e.target.value.replace(/[^A-Fa-f0-9]/g, '');
+        let formattedValue = '';
+        for (let i = 0; i < value.length && i < 12; i++) {
+          if (i > 0 && i % 2 === 0) {
+            formattedValue += ':';
+          }
+          formattedValue += value[i];
+        }
+        e.target.value = formattedValue.toUpperCase();
+      });
+
+      deviceInput.addEventListener('keydown', e => {
+        if (e.key === 'Backspace') {
+          const value = e.target.value;
+          if (value.endsWith(':')) {
+            e.target.value = value.substring(0, value.length - 1);
+          }
+        }
+      });
+    </script>
   </body>
-  <script>
-    const deviceInput = document.querySelector('input[name="device_id"]');
-
-    deviceInput.addEventListener('input', e => {
-      let value = e.target.value.replace(/[^A-Fa-f0-9]/g, '');
-
-      let formattedValue = '';
-      for (let i = 0; i < value.length && i < 12; i++) {
-        if (i > 0 && i % 2 === 0) {
-          formattedValue += ':';
-        }
-        formattedValue += value[i];
-      }
-
-      e.target.value = formattedValue.toUpperCase();
-    });
-
-    deviceInput.addEventListener('keydown', e => {
-      if (e.key === 'Backspace') {
-        const value = e.target.value;
-        if (value.endsWith(':')) {
-          e.target.value = value.substring(0, value.length - 1);
-        }
-      }
-    });
-  </script>
 </html>
